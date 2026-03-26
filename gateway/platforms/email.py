@@ -24,7 +24,6 @@ import re
 import smtplib
 import ssl
 import uuid
-from datetime import datetime
 from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -230,7 +229,7 @@ class EmailAdapter(BasePlatformAdapter):
             # Mark all existing messages as seen so we only process new ones
             imap.select("INBOX")
             status, data = imap.uid("search", None, "ALL")
-            if status == "OK" and data[0]:
+            if status == "OK" and data and data[0]:
                 for uid in data[0].split():
                     self._seen_uids.add(uid)
             imap.logout()
@@ -295,7 +294,7 @@ class EmailAdapter(BasePlatformAdapter):
             imap.select("INBOX")
 
             status, data = imap.uid("search", None, "UNSEEN")
-            if status != "OK" or not data[0]:
+            if status != "OK" or not data or not data[0]:
                 imap.logout()
                 return results
 
@@ -454,7 +453,6 @@ class EmailAdapter(BasePlatformAdapter):
 
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Email has no typing indicator — no-op."""
-        pass
 
     async def send_image(
         self,

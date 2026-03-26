@@ -33,6 +33,7 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
+from hermes_constants import get_hermes_home
 from typing import Callable, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ DEFAULT_ELEVENLABS_MODEL_ID = "eleven_multilingual_v2"
 DEFAULT_ELEVENLABS_STREAMING_MODEL_ID = "eleven_flash_v2_5"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini-tts"
 DEFAULT_OPENAI_VOICE = "alloy"
-DEFAULT_OUTPUT_DIR = str(Path(os.getenv("HERMES_HOME", Path.home() / ".hermes")) / "audio_cache")
+DEFAULT_OUTPUT_DIR = str(get_hermes_home() / "audio_cache")
 MAX_TEXT_LENGTH = 4000
 
 
@@ -239,6 +240,7 @@ def _generate_openai_tts(text: str, output_path: str, tts_config: Dict[str, Any]
     oai_config = tts_config.get("openai", {})
     model = oai_config.get("model", DEFAULT_OPENAI_MODEL)
     voice = oai_config.get("voice", DEFAULT_OPENAI_VOICE)
+    base_url = oai_config.get("base_url", "https://api.openai.com/v1")
 
     # Determine response format from extension
     if output_path.endswith(".ogg"):
@@ -247,7 +249,7 @@ def _generate_openai_tts(text: str, output_path: str, tts_config: Dict[str, Any]
         response_format = "mp3"
 
     OpenAIClient = _import_openai_client()
-    client = OpenAIClient(api_key=api_key, base_url="https://api.openai.com/v1")
+    client = OpenAIClient(api_key=api_key, base_url=base_url)
     response = client.audio.speech.create(
         model=model,
         voice=voice,
@@ -423,8 +425,8 @@ def text_to_speech_tool(
             if not _check_neutts_available():
                 return json.dumps({
                     "success": False,
-                    "error": "NeuTTS provider selected but neutts_cli is not installed. "
-                             "Install the NeuTTS skill and run the bootstrap helper first."
+                    "error": "NeuTTS provider selected but neutts is not installed. "
+                             "Run hermes setup and choose NeuTTS, or install espeak-ng and run python -m pip install -U neutts[all]."
                 }, ensure_ascii=False)
             logger.info("Generating speech with NeuTTS (local)...")
             _generate_neutts(text, file_str, tts_config)
@@ -628,7 +630,6 @@ def stream_tts_to_speaker(
             if client is not None:
                 try:
                     sd = _import_sounddevice()
-                    import numpy as _np
                     output_stream = sd.OutputStream(
                         samplerate=24000, channels=1, dtype="int16",
                     )

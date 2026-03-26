@@ -186,7 +186,7 @@ def do_browse(page: int = 1, page_size: int = 20, source: str = "all",
     Official skills are always shown first, regardless of source filter.
     """
     from tools.skills_hub import (
-        GitHubAuth, create_source_router, OptionalSkillSource, SkillMeta,
+        GitHubAuth, create_source_router,
     )
 
     # Clamp page_size to safe range
@@ -455,6 +455,8 @@ def do_inspect(identifier: str, console: Optional[Console] = None) -> None:
 
     if bundle and "SKILL.md" in bundle.files:
         content = bundle.files["SKILL.md"]
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="replace")
         # Show first 50 lines as preview
         lines = content.split("\n")
         preview = "\n".join(lines[:50])
@@ -640,7 +642,8 @@ def do_tap(action: str, repo: str = "", console: Optional[Console] = None) -> No
         table.add_column("Repo", style="bold cyan")
         table.add_column("Path", style="dim")
         for t in taps:
-            table.add_row(t["repo"], t.get("path", "skills/"))
+            label = t.get("repo") or t.get("name") or t.get("path", "unknown")
+            table.add_row(label, t.get("path", "skills/"))
         c.print(table)
         c.print()
 
